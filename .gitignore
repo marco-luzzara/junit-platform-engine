@@ -3,3 +3,4 @@ build/
 gradle/
 gradlew*
 .gradle/
+src/test/generated-java/
