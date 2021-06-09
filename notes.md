@@ -140,6 +140,34 @@ testEvents.assertThatEvents()
 
 Although typically unnecessary, you might want to test **all** the events fired during the execution of the `TestPlan`, you can use other api like `assertEventsMatchExactly()` or `assertEventsMatchLooselyInOrder()`. These assertions come from the assertJ library.
 
+## Cucumber engine workaround
+If you are writing a `TestEngine` and your build tool is Gradle, there are some restrictions to consider. Unfortunately, you cannot customize the `Launcher` settings extensively: as for now the [test.useJUnitPlatform](https://docs.gradle.org/current/javadoc/org/gradle/api/tasks/testing/Test.html#useJUnitPlatform-org.gradle.api.Action-) method does not provide a way to change the test discovery preference, which is set to `ClassSelector`, so that only class files are considered. 
+
+This is clearly problematic in the case of `Cucumber` because tests are in `.feature` files, that are not recognized as Java class files, of course. There are two workarounds for this:
+
+- forcing the creation of a dummy class with the `@Cucumber` annotation in the package containing the `.feature` files. In this case the `cucumber-engine` retrieves the package name from the found class and search for all `.feature` files in that package.
+- Using the `JUnit Platform Console Launcher`, which is a standalone application for launching the JUnit platform from the console and fully supports the test discovery options. It can be run as a `Gradle` task as well:
+```
+    tasks {
+
+    	val consoleLauncherTest by registering(JavaExec::class) {
+    		dependsOn(testClasses)
+    		val reportsDir = file("$buildDir/test-results")
+    		outputs.dir(reportsDir)
+    		classpath = sourceSets["test"].runtimeClasspath
+    		main = "org.junit.platform.console.ConsoleLauncher"
+    		args("--scan-classpath")
+    		args("--include-engine", "cucumber")
+    		args("--reports-dir", reportsDir)
+    	}
+
+    	test {
+    		dependsOn(consoleLauncherTest)
+    		exclude("**/*")
+    	}
+    }
+```
+
 
 ## Sources
 JUnit5 official documentation: [https://junit.org/junit5/docs/snapshot/user-guide/index.html#launcher-api](https://junit.org/junit5/docs/snapshot/user-guide/index.html#launcher-api)
