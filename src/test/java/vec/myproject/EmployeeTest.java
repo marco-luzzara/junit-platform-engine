@@ -5,13 +5,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static vec.myproject.EmployeeAssert.assertThat;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
+import vec.engine.annotations.Dockerized;
 
 public class EmployeeTest {
-  @ParameterizedTest
+  @DisplayName("Constructor with invalid fullname")
+  @ParameterizedTest(name = "[{index}] {displayName} - {argumentsWithNames}")
   @NullAndEmptySource
   public void constructor_invalidFullname_throw(String invalidFullname) {
     assertThatThrownBy(() -> new Employee(invalidFullname))
@@ -26,6 +28,7 @@ public class EmployeeTest {
         () -> assertThat(empl).hasFullname("emp1"), () -> assertThat(empl).hasWorkingHours(0));
   }
 
+  @Dockerized
   @Test
   public void workFor_nHours_addNToWorkingHours() {
     var empl = new Employee("emp1");
@@ -34,26 +37,5 @@ public class EmployeeTest {
     empl.workFor(10);
 
     assertThat(empl).hasWorkingHours(15);
-  }
-
-  @Test
-  public void computeSalary_workedForNHours_salaryIsNTimes10() {
-    var empl = new Employee("emp1");
-    empl.workFor(5);
-
-    var salary = empl.computeSalary();
-
-    assertThat(salary).isEqualTo(5 * 10);
-  }
-
-  @ParameterizedTest
-  @CsvSource({"valid mail, true", "Do not send, false"})
-  public void sendMailTo_startsWithDoNotSend_mailNotSent(String message, boolean shouldSendMail) {
-    var empl1 = new Employee("emp1");
-    var empl2 = new Employee("emp2");
-
-    var isMailSent = empl1.sendMailTo(empl2, message);
-
-    assertThat(isMailSent).isEqualTo(shouldSendMail);
   }
 }
