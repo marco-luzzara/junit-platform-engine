@@ -11,7 +11,7 @@ import vec.engine.annotations.Dockerized;
 
 public class DockerizedTestMethodDescriptor extends AbstractTestDescriptor {
   private final Method testMethod;
-  private final Class testClass;
+  private final Class<?> testClass;
 
   public DockerizedTestMethodDescriptor(
       Method testMethod, Class<?> testClass, DockerizedTestClassDescriptor parent) {

@@ -2,11 +2,11 @@
 docker build -t junit-console-launcher ./docker
 
 # docker run
-docker run --rm -it -d -v "$(pwd)/src:/prj/src" -v "$(pwd)/build.gradle:/prj/build.gradle" \
+docker run --rm -it -v "$(pwd)/src:/prj/src" -v "$(pwd)/build.gradle:/prj/build.gradle" \
     --name junit-cl junit-console-launcher
 
 # run test
 docker exec junit-cl bash -c 'java -jar /junit-console-launcher.jar -cp $(gradle -q printClassPath) \
-    -E=docker-engine --details=summary --disable-banner \
-    -m vec.myproject.EmployeeOnDockerTest#computeSalary_workedForNHours_salaryIsNTimes10'
+    -E="docker-engine" --details=summary --disable-banner \
+    -m "vec.myproject.EmployeeOnDockerTest#computeSalary_workedForNHours_salaryIsNTimes10"'
 

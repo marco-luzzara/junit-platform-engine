@@ -1,6 +1,5 @@
 package vec.engine.impl;
 
-import java.lang.reflect.Method;
 import org.junit.platform.commons.util.ReflectionUtils;
 import org.junit.platform.engine.*;
 import org.junit.platform.engine.discovery.ClassSelector;
@@ -32,23 +31,7 @@ public class DockerEngine implements TestEngine {
 
   @Override
   public void execute(ExecutionRequest request) {
-    TestDescriptor rootDescriptor = request.getRootTestDescriptor();
-    var listener = request.getEngineExecutionListener();
-
-    listener.executionStarted(rootDescriptor);
-
-    for (var cls : rootDescriptor.getChildren()) {
-      listener.executionStarted(cls);
-
-      for (var method : cls.getChildren()) {
-        listener.executionStarted(method);
-        listener.executionFinished(method, TestExecutionResult.successful());
-      }
-
-      listener.executionFinished(cls, TestExecutionResult.successful());
-    }
-
-    listener.executionFinished(rootDescriptor, TestExecutionResult.successful());
+    new DockerEngineExecutor().execute(request);
   }
 
   private void appendTestsInClass(Class<?> javaClass, TestDescriptor engineDescriptor) {
@@ -59,27 +42,28 @@ public class DockerEngine implements TestEngine {
       engineDescriptor.addChild(new DockerizedTestClassDescriptor(javaClass, engineDescriptor));
   }
 
-  private void appendTestMethods(
-      Class<?> javaClass, Method javaMethod, TestDescriptor engineDescriptor) {
-    if (!DockerizedTestMethodDescriptor.isDockerizedTestMethod(javaMethod)) return;
-
-    var testClassDescriptor = getOrCreateClassDescriptor(engineDescriptor, javaClass);
-    testClassDescriptor.addChild(
-        new DockerizedTestMethodDescriptor(javaMethod, javaClass, testClassDescriptor));
-  }
-
-  private DockerizedTestClassDescriptor getOrCreateClassDescriptor(
-      TestDescriptor root, Class<?> classCandidate) {
-    var testClassDescriptor =
-        root.findByUniqueId(
-                DockerizedTestClassDescriptor.getTestClassDescriptorUniqueId(root, classCandidate))
-            .orElse(null);
-
-    if (testClassDescriptor == null) {
-      testClassDescriptor = new DockerizedTestClassDescriptor(classCandidate, root);
-      root.addChild(testClassDescriptor);
-    }
-
-    return (DockerizedTestClassDescriptor) testClassDescriptor;
-  }
+  //  private void appendTestMethods(
+  //      Class<?> javaClass, Method javaMethod, TestDescriptor engineDescriptor) {
+  //    if (!DockerizedTestMethodDescriptor.isDockerizedTestMethod(javaMethod)) return;
+  //
+  //    var testClassDescriptor = getOrCreateClassDescriptor(engineDescriptor, javaClass);
+  //    testClassDescriptor.addChild(
+  //        new DockerizedTestMethodDescriptor(javaMethod, javaClass, testClassDescriptor));
+  //  }
+  //
+  //  private DockerizedTestClassDescriptor getOrCreateClassDescriptor(
+  //      TestDescriptor root, Class<?> classCandidate) {
+  //    var testClassDescriptor =
+  //        root.findByUniqueId(
+  //                DockerizedTestClassDescriptor.getTestClassDescriptorUniqueId(root,
+  // classCandidate))
+  //            .orElse(null);
+  //
+  //    if (testClassDescriptor == null) {
+  //      testClassDescriptor = new DockerizedTestClassDescriptor(classCandidate, root);
+  //      root.addChild(testClassDescriptor);
+  //    }
+  //
+  //    return (DockerizedTestClassDescriptor) testClassDescriptor;
+  //  }
 }

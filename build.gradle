@@ -37,7 +37,6 @@ task testWithDocker(type: Test) {
     testLogging {
         events "passed", "skipped", "failed"
     }
-
 }
 
 tasks.register('printClassPath') {

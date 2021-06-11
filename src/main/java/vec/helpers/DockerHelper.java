@@ -11,9 +11,9 @@ import com.github.dockerjava.core.DockerClientImpl;
 import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
 
 public class DockerHelper {
-  private static final DockerClient client;
+  private final DockerClient client;
 
-  static {
+  public DockerHelper() {
     var config = DefaultDockerClientConfig.createDefaultConfigBuilder().build();
     var dockerHttpClient =
         new ApacheDockerHttpClient.Builder()
@@ -22,7 +22,7 @@ public class DockerHelper {
             .maxConnections(5)
             .build();
 
-    client = DockerClientImpl.getInstance(config, dockerHttpClient);
+    this.client = DockerClientImpl.getInstance(config, dockerHttpClient);
   }
 
   // docker run --rm -it -d -v "$(pwd)/src:/prj/src" -v "$(pwd)/build.gradle:/prj/build.gradle"
@@ -60,14 +60,14 @@ public class DockerHelper {
   }
 
   // docker exec junit-cl gradle build
-  public void makeSureGradleIsRunning(final String containerId) {
+  public void buildTestClasses(final String containerId) {
     try {
       var execId =
           client
               .execCreateCmd(containerId)
               .withAttachStdout(true)
               .withAttachStderr(true)
-              .withCmd("gradle", "build")
+              .withCmd("gradle", "testClasses")
               .exec()
               .getId();
 
@@ -82,18 +82,14 @@ public class DockerHelper {
 
   // docker exec junit-cl bash -c 'java -jar /junit-console-launcher.jar -cp $(gradle -q
   // printClassPath) \
-  //    -E=docker-engine --details=summary --disable-banner \
-  //    -m vec.myproject.EmployeeOnDockerTest#computeSalary_workedForNHours_salaryIsNTimes10'
-  public String runTestInsideDockerContainer(
-      String containerId, String canonicalClassName, String methodName) {
+  //    -E="docker-engine" --details=summary --disable-banner \
+  //    -m "vec.myproject.EmployeeOnDockerTest#computeSalary_workedForNHours_salaryIsNTimes10"'
+  public String runTestInsideDockerContainer(String containerId, String methodFullyQualifiedName) {
     try {
       var junitConsoleLauncherCommand =
           String.format(
-              """
-              java -jar /junit-console-launcher.jar -cp $(gradle -q printClassPath) \\
-              -E=docker-engine --details=summary --disable-banner \\
-              -m %s#%s""",
-              canonicalClassName, methodName);
+              "java -jar /junit-console-launcher.jar -cp $(gradle -q printClassPath) -E=\"docker-engine\" --details=summary --disable-banner -m \"%s\"",
+              methodFullyQualifiedName);
 
       var execId =
           client
