@@ -14,7 +14,7 @@ public class DockerizedTestClassDescriptor extends AbstractTestDescriptor {
   protected DockerizedTestClassDescriptor(Class<?> testClass, TestDescriptor parent) {
     super(
         getTestClassDescriptorUniqueId(parent, testClass),
-        testClass.getSimpleName(),
+        testClass.getSimpleName() + " Dockerized",
         ClassSource.from(testClass));
     this.testClass = testClass;
     super.setParent(parent);
