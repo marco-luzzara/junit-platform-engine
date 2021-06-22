@@ -17,7 +17,7 @@ The new modular approach allows the separation of different concerns:
 - The end user writes tests helped by the APIs made public by each third-party programming model, without having to deal with the platform modules.
 
 ## Why do I need a Custom JUnit5 Engine
-Most of the cases having tests in the form of Java classes is enough, and this is already covered by `JUnit Vintage` and `JUnit Jupiter` test engines. However, you might need to run tests written in a DSL, like in the case of Cucumber with Gherkin syntax, or just discover tests that are auto-generated or downloaded at runtime. 
+Most of the times having tests in the form of Java classes is enough, and this is already covered by `JUnit Vintage` and `JUnit Jupiter` test engines. However, you might need to run tests written in a DSL, like in the case of Cucumber with Gherkin syntax, or just discover tests that are auto-generated or downloaded at runtime. A custom test engine could be very useful for certain types of testing, like 
 
 ---
 
@@ -58,9 +58,40 @@ try (LauncherSession session = LauncherFactory.openSession()) {
 }
 ```
 
-The resulting `TestPlan` is a hierarchical (and read-only) description of all engines, classes, and test methods that fit the `LauncherDiscoveryRequest`. The client can traverse the tree, retrieve details about a node, and get a link to the original source (like class, method, or file position). Every node in the test plan has a unique ID that can be used to invoke a particular test or group of tests.
+The resulting `TestPlan` is a hierarchical (and read-only) description of all engines, classes, and test methods that fit the `LauncherDiscoveryRequest`. `TestDescriptor`s exist for the scope of a `TestEngine` only, during the construction of the `TestPlan` every descriptor is converted to a [`TestIdentifier`](https://github.com/junit-team/junit5/blob/4a9b660b3d7c6de41c728f1e9140cd8fbb682107/junit-platform-launcher/src/main/java/org/junit/platform/launcher/TestIdentifier.java), which contains the same information as a descriptor, but additionally it is `Serializable` (with its own `readObject` and `writeObject`). The client can traverse the tree, retrieve details about a node, and get a link to the original source (like class, method, or file position). Every node in the test plan has a unique ID that can be used to invoke a particular test or group of tests.
 
 Clients can also register one or more [`LauncherDiscoveryListener`](https://junit.org/junit5/docs/snapshot/api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherDiscoveryListener.html) to get insights into events that occur during test discovery.
+
+Building tool like `Gradle` have their own `Launcher` implementation, publically available [here](https://github.com/gradle/gradle/blob/master/subprojects/testing-junit-platform/src/main/java/org/gradle/api/internal/tasks/testing/junitplatform/JUnitPlatformTestClassProcessor.java):
+
+```
+public class JUnitPlatformTestClassProcessor extends AbstractJUnitTestClassProcessor<JUnitPlatformSpec> {
+    ...
+    private class CollectAllTestClassesExecutor implements Action<String> {
+        ...
+        private void processAllTestClasses() {
+            Launcher launcher = LauncherFactory.create();
+            launcher.registerTestExecutionListeners(new JUnitPlatformTestExecutionListener(resultProcessor, clock, idGenerator));
+            launcher.execute(createLauncherDiscoveryRequest(testClasses));
+        }
+    }
+    
+    private LauncherDiscoveryRequest createLauncherDiscoveryRequest(List<Class<?>> testClasses) {
+        List<DiscoverySelector> classSelectors = testClasses.stream()
+            .map(DiscoverySelectors::selectClass)
+            .collect(Collectors.toList());
+
+        LauncherDiscoveryRequestBuilder requestBuilder = LauncherDiscoveryRequestBuilder.request().selectors(classSelectors);
+
+        addTestNameFilters(requestBuilder);
+        addEnginesFilter(requestBuilder);
+        addTagsFilter(requestBuilder);
+
+        return requestBuilder.build();
+    }
+    ...
+}
+```
 
 ### Test Execution
 To execute tests, clients can use the same `LauncherDiscoveryRequest` used in the discovery phase or create a new one. Test progress and reporting can be achieved by registering one or more [`TestExecutionListener`](https://junit.org/junit5/docs/snapshot/api/org.junit.platform.launcher/org/junit/platform/launcher/TestExecutionListener.html)
@@ -98,10 +129,19 @@ There are 2 ways to register a custom test engine:
         .addTestEngines(new CustomTestEngine())
         // ...
         .build();
-    
+
     try (LauncherSession session = LauncherFactory.openSession(launcherConfig)) {
         session.getLauncher().execute(request);
     }
+```
+
+Considering you generally cannot control the `LauncherConfig`s, build tools often allows you to specify which test engines you want to use, in case of `Gradle`:
+```
+test {
+    useJUnitPlatform {
+        includeEngines 'engine-id1', 'engine-id2'
+    }
+}
 ```
 
 ## How to test your `TestEngine` implementation?
@@ -167,6 +207,66 @@ This is clearly problematic in the case of `Cucumber` because tests are in `.fea
     	}
     }
 ```
+
+## Other customizations
+
+### Discovery and PostDiscovery filters
+Filters are very useful in order to run only those tests we are temporarily interested in. The junit platform distinguishes between two types of filters:
+
+- `DiscoveryFilter<?>`, that are applied during test discovery to determine if a test or container must be included in the `TestPlan`, e.g. `ClassNameFilter` (and `PackageNameFilter`), that accepts a pattern that is going to match the class fully qualified name. In particular they take action in `SelectorResolver`s, like the [`ClassSelectorResolver`](https://github.com/junit-team/junit5/blob/4a9b660b3d7c6de41c728f1e9140cd8fbb682107/junit-jupiter-engine/src/main/java/org/junit/jupiter/engine/discovery/ClassSelectorResolver.java), for the `junit-jupiter` engine:
+
+```
+    @Override
+	public Resolution resolve(ClassSelector selector, Context context) {
+		Class<?> testClass = selector.getJavaClass();
+		if (isTestClassWithTests.test(testClass)) {
+			// Nested tests are never filtered out
+			if (classNameFilter.test(testClass.getName())) {
+				return toResolution(
+					context.addToParent(parent -> Optional.of(newClassTestDescriptor(parent, testClass))));
+			}
+		}
+
+        // ...
+
+		return unresolved();
+	}
+```
+- `PostDiscoveryFilter`, that is applied to `TestDescriptor`s after test discovery, e.g. `TagFilter`. The default behaviour of the `Launcher` is to filter descriptors in the [`EngineDiscoveryOrchestrator.discoverSafely`](https://github.com/junit-team/junit5/blob/4a9b660b3d7c6de41c728f1e9140cd8fbb682107/junit-platform-launcher/src/main/java/org/junit/platform/launcher/core/EngineDiscoveryOrchestrator.java) method and prune the tree if necessary, like when a container does not have any tests:
+
+```
+    private Map<TestEngine, TestDescriptor> discoverSafely(LauncherDiscoveryRequest request, Phase phase,
+			LauncherDiscoveryListener listener, Function<String, UniqueId> uniqueIdCreator) {
+		Map<TestEngine, TestDescriptor> testEngineDescriptors = new LinkedHashMap<>();
+
+		for (TestEngine testEngine : this.testEngines) {
+
+			// ...
+
+			TestDescriptor rootDescriptor = discoverEngineRoot(testEngine, request, listener, uniqueIdCreator);
+			testEngineDescriptors.put(testEngine, rootDescriptor);
+		}
+
+		List<PostDiscoveryFilter> filters = new LinkedList<>(postDiscoveryFilters);
+		filters.addAll(request.getPostDiscoveryFilters());
+
+		applyPostDiscoveryFilters(testEngineDescriptors, filters);
+		prune(testEngineDescriptors);
+
+		return testEngineDescriptors;
+	}
+```
+
+They both extend the `Filter` interface, but the post-discovery filters must never modify the `TestDescriptor` passed as argument. Only post-discovery filter can be registered for the `DefaultLauncher`, the suggested way is to leverage the `ServiceLoader` already seen for the test engines. In this case, the file to create is `/META-INF/services/org.junit.platform.launcher.PostDiscoveryFilter`.
+
+### Listeners
+As per the documentation it is possible to register 3 types of listener (but there are probably more) and you can add each of them with the `ServiceLoader` mechanism or with manual registration, if allowed by the `Launcher` implementation:
+
+- [`LauncherSessionListener`](https://junit.org/junit5/docs/snapshot/api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherSessionListener.html): it is notified when a `LauncherSession` is opened, that is before test discovery and execution, and closed.
+- [`LauncherDiscoveryListener`](https://junit.org/junit5/docs/snapshot/api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherDiscoveryListener.html): it is specific for the discovery phase only. It is notified at the start and at the end of the discovery phase of each test engine, when the general discovery begins and when it is complete.
+- [`TestExecutionListener`](https://junit.org/junit5/docs/current/api/org.junit.platform.launcher/org/junit/platform/launcher/TestExecutionListener.html): it is called during the `TestPlan`'s execution, in fact every method takes in input a `TestIdentifier`. It lets you customize the start/end/skip of every test (and container) and the registration of dynamic ones.
+
+To configure listeners registered using the `ServiceLoader` you have 3 options, described [here](https://junit.org/junit5/docs/snapshot/user-guide/index.html#running-tests-config-params).
 
 
 ## Sources
