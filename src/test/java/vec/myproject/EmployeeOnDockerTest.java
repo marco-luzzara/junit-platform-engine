@@ -23,7 +23,7 @@ public class EmployeeOnDockerTest {
   @DisplayName("send mail with different messages")
   @ParameterizedTest(name = "[{index}] {displayName} - {argumentsWithNames}")
   @CsvSource({"valid mail, true", "Do not send, false"})
-  public void sendMailTo_startsWithDoNotSend_mailNotSent(String message, boolean shouldSendMail) {
+  public void sendMailTo_ValidAndInvalid(String message, boolean shouldSendMail) {
     var empl1 = new Employee("emp1");
     var empl2 = new Employee("emp2");
 

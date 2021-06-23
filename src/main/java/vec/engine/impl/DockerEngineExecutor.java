@@ -1,9 +1,11 @@
 package vec.engine.impl;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import org.junit.platform.commons.util.ReflectionUtils;
+import org.junit.platform.engine.EngineExecutionListener;
 import org.junit.platform.engine.ExecutionRequest;
 import org.junit.platform.engine.TestDescriptor;
 import org.junit.platform.engine.TestExecutionResult;
@@ -21,27 +23,67 @@ public class DockerEngineExecutor {
       dockerHelper.buildTestClasses(containerId);
       listener.executionStarted(rootDescriptor);
 
+      var unsuccessfulContainerResults = new ArrayList<TestExecutionResult>();
       for (var clsDesc : (Set<DockerizedTestClassDescriptor>) rootDescriptor.getChildren()) {
         listener.executionStarted(clsDesc);
 
-        for (var methodDesc : (Set<DockerizedTestMethodDescriptor>) clsDesc.getChildren()) {
-          listener.executionStarted(methodDesc);
-
-          String methodFullyQualifiedName =
-              ReflectionUtils.getFullyQualifiedMethodName(
-                  methodDesc.getTestClass(), methodDesc.getTestMethod());
-          var testResult = runTest(dockerHelper, containerId, methodFullyQualifiedName);
-
-          listener.executionFinished(methodDesc, testResult);
-        }
-
-        listener.executionFinished(clsDesc, TestExecutionResult.successful());
+        var containerExecutionResult =
+            executeDockerizedMethodsInsideClass(clsDesc, listener, dockerHelper, containerId);
+        listener.executionFinished(clsDesc, containerExecutionResult);
+        if (containerExecutionResult.getStatus() != TestExecutionResult.Status.SUCCESSFUL)
+          unsuccessfulContainerResults.add(containerExecutionResult);
       }
 
-      listener.executionFinished(rootDescriptor, TestExecutionResult.successful());
+      var containerExecutionResult =
+          getExecutionResultFromChildrenResults(unsuccessfulContainerResults);
+      listener.executionFinished(rootDescriptor, containerExecutionResult);
     } finally {
       dockerHelper.stopTestingContainer(containerId);
     }
+  }
+
+  private TestExecutionResult executeDockerizedMethodsInsideClass(
+      DockerizedTestClassDescriptor clsDesc,
+      EngineExecutionListener listener,
+      DockerHelper dockerHelper,
+      String containerId) {
+    var unsuccessfulTestResults = new ArrayList<TestExecutionResult>();
+    for (var methodDesc : (Set<DockerizedTestMethodDescriptor>) clsDesc.getChildren()) {
+      listener.executionStarted(methodDesc);
+
+      String methodFullyQualifiedName =
+          ReflectionUtils.getFullyQualifiedMethodName(
+              methodDesc.getTestClass(), methodDesc.getTestMethod());
+      var testResult = runTest(dockerHelper, containerId, methodFullyQualifiedName);
+      if (testResult.getStatus() != TestExecutionResult.Status.SUCCESSFUL)
+        unsuccessfulTestResults.add(testResult);
+
+      listener.executionFinished(methodDesc, testResult);
+    }
+
+    return getExecutionResultFromChildrenResults(unsuccessfulTestResults);
+  }
+
+  private TestExecutionResult getExecutionResultFromChildrenResults(
+      List<TestExecutionResult> childrenUnsuccessfulResults) {
+    return childrenUnsuccessfulResults.size() >= 1
+        ? TestExecutionResult.failed(
+            buildAggregatedException(
+                "One or more exceptions have been suppressed",
+                childrenUnsuccessfulResults.stream()
+                    .map(testRes -> testRes.getThrowable().orElseThrow())
+                    .toArray(Throwable[]::new)))
+        : TestExecutionResult.successful();
+  }
+
+  private Throwable buildAggregatedException(String message, Throwable[] throwables) {
+    var outerThrowable = new RuntimeException(message);
+
+    for (var throwable : throwables) {
+      outerThrowable.addSuppressed(throwable);
+    }
+
+    return outerThrowable;
   }
 
   private TestExecutionResult runTest(

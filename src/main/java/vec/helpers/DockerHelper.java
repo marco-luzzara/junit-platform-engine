@@ -25,6 +25,12 @@ public class DockerHelper {
     this.client = DockerClientImpl.getInstance(config, dockerHttpClient);
   }
 
+  /**
+   * start the testing container with 2 bind mounts: the src folder and the build.gradle file. the
+   * container name is junit-cl
+   *
+   * @return the id of the started container
+   */
   // docker run --rm -it -d -v "$(pwd)/src:/prj/src" -v "$(pwd)/build.gradle:/prj/build.gradle"
   //    --name junit-cl junit-console-launcher
   public String startTestingContainer() {
@@ -54,11 +60,22 @@ public class DockerHelper {
     return containerId;
   }
 
+  /**
+   * Stops the container with id containerId
+   *
+   * @param containerId
+   */
   // docker stop junit-cl
   public void stopTestingContainer(String containerId) {
     client.stopContainerCmd(containerId).exec();
   }
 
+  /**
+   * Inside the container with id containerId, only the gradle daemon has been started. this method
+   * execute a `gradle build` to compile the source code.
+   *
+   * @param containerId
+   */
   // docker exec junit-cl gradle build
   public void buildTestClasses(final String containerId) {
     try {
@@ -80,6 +97,15 @@ public class DockerHelper {
     }
   }
 
+  /**
+   * calls the junit console launcher inside the container and returns the summary of the execution.
+   * the only selector given is the methodFullyQualifiedName passed in input. The classpath is
+   * computed by gradle, by making it print with `printCLassPath` task.
+   *
+   * @param containerId
+   * @param methodFullyQualifiedName
+   * @return
+   */
   // docker exec junit-cl bash -c 'java -jar /junit-console-launcher.jar -cp $(gradle -q
   // printClassPath) \
   //    -E="docker-engine" --details=summary --disable-banner \

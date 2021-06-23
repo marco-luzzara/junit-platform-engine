@@ -17,6 +17,7 @@ dependencies {
     implementation 'org.junit.platform:junit-platform-commons:1.7.0'
     implementation 'org.junit.platform:junit-platform-engine:1.7.0'
     implementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    testImplementation 'org.junit.platform:junit-platform-testkit:1.7.0'
     testImplementation 'org.junit.jupiter:junit-jupiter-params:5.7.0'
     testImplementation 'org.assertj:assertj-core:3.6.2'
     testImplementation 'javax.annotation:javax.annotation-api:1.2-b01'
@@ -24,6 +25,10 @@ dependencies {
 }
 
 test {
+    filter {
+        excludeTestsMatching 'vec.engine.sample.*'
+        excludeTestsMatching 'vec.engine.DockerEngineTest.*'
+    }
     useJUnitPlatform() {
         excludeEngines 'docker-engine'
     }
@@ -33,7 +38,25 @@ test {
 }
 
 task testWithDocker(type: Test) {
+    group 'verification'
+    filter {
+        excludeTestsMatching 'vec.engine.sample.*'
+        excludeTestsMatching 'vec.engine.DockerEngineTest.*'
+    }
     useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+}
+
+task testEngine(type: Test) {
+    group 'verification'
+    filter {
+        includeTestsMatching 'vec.engine.DockerEngineTest'
+    }
+    useJUnitPlatform() {
+        excludeEngines 'docker-engine'
+    }
     testLogging {
         events "passed", "skipped", "failed"
     }
