@@ -26,8 +26,7 @@ dependencies {
 
 test {
     filter {
-        excludeTestsMatching 'vec.engine.sample.*'
-        excludeTestsMatching 'vec.engine.DockerEngineTest.*'
+        includeTestsMatching 'vec.myproject.*'
     }
     useJUnitPlatform() {
         excludeEngines 'docker-engine'
@@ -40,10 +39,11 @@ test {
 task testWithDocker(type: Test) {
     group 'verification'
     filter {
-        excludeTestsMatching 'vec.engine.sample.*'
-        excludeTestsMatching 'vec.engine.DockerEngineTest.*'
+        includeTestsMatching 'vec.myproject.*'
     }
-    useJUnitPlatform()
+    useJUnitPlatform() {
+        excludeEngines 'junit-jupiter'
+    }
     testLogging {
         events "passed", "skipped", "failed"
     }
@@ -52,7 +52,8 @@ task testWithDocker(type: Test) {
 task testEngine(type: Test) {
     group 'verification'
     filter {
-        includeTestsMatching 'vec.engine.DockerEngineTest'
+        includeTestsMatching 'vec.engine.*'
+        excludeTestsMatching 'vec.engine.sample.*'
     }
     useJUnitPlatform() {
         excludeEngines 'docker-engine'

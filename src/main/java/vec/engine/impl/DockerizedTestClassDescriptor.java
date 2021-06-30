@@ -23,7 +23,7 @@ public class DockerizedTestClassDescriptor extends AbstractTestDescriptor {
 
   public static UniqueId getTestClassDescriptorUniqueId(
       TestDescriptor parentDescriptor, Class<?> testClass) {
-    return parentDescriptor.getUniqueId().append("class", testClass.getSimpleName());
+    return parentDescriptor.getUniqueId().append("class", testClass.getCanonicalName());
   }
 
   public static boolean isDockerizedTestClass(Class<?> classCandidate) {
