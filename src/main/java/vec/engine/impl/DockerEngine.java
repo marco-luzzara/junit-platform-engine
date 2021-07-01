@@ -17,11 +17,6 @@ public class DockerEngine implements TestEngine {
   public TestDescriptor discover(EngineDiscoveryRequest discoveryRequest, UniqueId uniqueId) {
     TestDescriptor engineDescriptor = new EngineDescriptor(uniqueId, "Docker Engine");
 
-    //    discoveryRequest
-    //            .getSelectorsByType(MethodSelector.class)
-    //            .forEach(selector -> appendTestMethods(selector.getJavaClass(),
-    // selector.getJavaMethod(), engineDescriptor));
-
     discoveryRequest
         .getSelectorsByType(ClassSelector.class)
         .forEach(selector -> appendTestsInClass(selector.getJavaClass(), engineDescriptor));
@@ -41,29 +36,4 @@ public class DockerEngine implements TestEngine {
         > 0)
       engineDescriptor.addChild(new DockerizedTestClassDescriptor(javaClass, engineDescriptor));
   }
-
-  //  private void appendTestMethods(
-  //      Class<?> javaClass, Method javaMethod, TestDescriptor engineDescriptor) {
-  //    if (!DockerizedTestMethodDescriptor.isDockerizedTestMethod(javaMethod)) return;
-  //
-  //    var testClassDescriptor = getOrCreateClassDescriptor(engineDescriptor, javaClass);
-  //    testClassDescriptor.addChild(
-  //        new DockerizedTestMethodDescriptor(javaMethod, javaClass, testClassDescriptor));
-  //  }
-  //
-  //  private DockerizedTestClassDescriptor getOrCreateClassDescriptor(
-  //      TestDescriptor root, Class<?> classCandidate) {
-  //    var testClassDescriptor =
-  //        root.findByUniqueId(
-  //                DockerizedTestClassDescriptor.getTestClassDescriptorUniqueId(root,
-  // classCandidate))
-  //            .orElse(null);
-  //
-  //    if (testClassDescriptor == null) {
-  //      testClassDescriptor = new DockerizedTestClassDescriptor(classCandidate, root);
-  //      root.addChild(testClassDescriptor);
-  //    }
-  //
-  //    return (DockerizedTestClassDescriptor) testClassDescriptor;
-  //  }
 }

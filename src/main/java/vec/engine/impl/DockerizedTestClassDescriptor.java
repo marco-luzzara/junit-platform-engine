@@ -11,7 +11,7 @@ import vec.engine.annotations.Dockerized;
 public class DockerizedTestClassDescriptor extends AbstractTestDescriptor {
   private final Class<?> testClass;
 
-  protected DockerizedTestClassDescriptor(Class<?> testClass, TestDescriptor parent) {
+  public DockerizedTestClassDescriptor(Class<?> testClass, TestDescriptor parent) {
     super(
         getTestClassDescriptorUniqueId(parent, testClass),
         testClass.getSimpleName() + " Dockerized",
