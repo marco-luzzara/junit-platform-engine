@@ -1,4 +1,4 @@
-package vec.engine.impl;
+package vec.engine.impl.descriptors;
 
 import org.junit.platform.commons.support.AnnotationSupport;
 import org.junit.platform.commons.util.ReflectionUtils;
@@ -6,12 +6,15 @@ import org.junit.platform.engine.TestDescriptor;
 import org.junit.platform.engine.UniqueId;
 import org.junit.platform.engine.support.descriptor.AbstractTestDescriptor;
 import org.junit.platform.engine.support.descriptor.ClassSource;
+import org.junit.platform.engine.support.hierarchical.Node;
 import vec.engine.annotations.Dockerized;
+import vec.engine.impl.DockerEngineExecutionContext;
 
-public class DockerizedTestClassDescriptor extends AbstractTestDescriptor {
+public class DockerizedTestClassDescriptor extends AbstractTestDescriptor
+    implements Node<DockerEngineExecutionContext> {
   private final Class<?> testClass;
 
-  protected DockerizedTestClassDescriptor(Class<?> testClass, TestDescriptor parent) {
+  public DockerizedTestClassDescriptor(Class<?> testClass, TestDescriptor parent) {
     super(
         getTestClassDescriptorUniqueId(parent, testClass),
         testClass.getSimpleName() + " Dockerized",

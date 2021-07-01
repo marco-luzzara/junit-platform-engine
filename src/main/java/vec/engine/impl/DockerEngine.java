@@ -1,11 +1,17 @@
 package vec.engine.impl;
 
 import org.junit.platform.commons.util.ReflectionUtils;
-import org.junit.platform.engine.*;
+import org.junit.platform.engine.EngineDiscoveryRequest;
+import org.junit.platform.engine.ExecutionRequest;
+import org.junit.platform.engine.TestDescriptor;
+import org.junit.platform.engine.UniqueId;
 import org.junit.platform.engine.discovery.ClassSelector;
-import org.junit.platform.engine.support.descriptor.EngineDescriptor;
+import org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine;
+import vec.engine.impl.descriptors.DockerEngineDescriptor;
+import vec.engine.impl.descriptors.DockerizedTestClassDescriptor;
+import vec.engine.impl.descriptors.DockerizedTestMethodDescriptor;
 
-public class DockerEngine implements TestEngine {
+public class DockerEngine extends HierarchicalTestEngine<DockerEngineExecutionContext> {
   private static final String ENGINE_ID = "docker-engine";
 
   @Override
@@ -14,24 +20,19 @@ public class DockerEngine implements TestEngine {
   }
 
   @Override
-  public TestDescriptor discover(EngineDiscoveryRequest discoveryRequest, UniqueId uniqueId) {
-    TestDescriptor engineDescriptor = new EngineDescriptor(uniqueId, "Docker Engine");
+  protected DockerEngineExecutionContext createExecutionContext(ExecutionRequest request) {
+    return new DockerEngineExecutionContext();
+  }
 
-    //    discoveryRequest
-    //            .getSelectorsByType(MethodSelector.class)
-    //            .forEach(selector -> appendTestMethods(selector.getJavaClass(),
-    // selector.getJavaMethod(), engineDescriptor));
+  @Override
+  public TestDescriptor discover(EngineDiscoveryRequest discoveryRequest, UniqueId uniqueId) {
+    DockerEngineDescriptor engineDescriptor = new DockerEngineDescriptor(uniqueId);
 
     discoveryRequest
         .getSelectorsByType(ClassSelector.class)
         .forEach(selector -> appendTestsInClass(selector.getJavaClass(), engineDescriptor));
 
     return engineDescriptor;
-  }
-
-  @Override
-  public void execute(ExecutionRequest request) {
-    new DockerEngineExecutor().execute(request);
   }
 
   private void appendTestsInClass(Class<?> javaClass, TestDescriptor engineDescriptor) {
@@ -41,29 +42,4 @@ public class DockerEngine implements TestEngine {
         > 0)
       engineDescriptor.addChild(new DockerizedTestClassDescriptor(javaClass, engineDescriptor));
   }
-
-  //  private void appendTestMethods(
-  //      Class<?> javaClass, Method javaMethod, TestDescriptor engineDescriptor) {
-  //    if (!DockerizedTestMethodDescriptor.isDockerizedTestMethod(javaMethod)) return;
-  //
-  //    var testClassDescriptor = getOrCreateClassDescriptor(engineDescriptor, javaClass);
-  //    testClassDescriptor.addChild(
-  //        new DockerizedTestMethodDescriptor(javaMethod, javaClass, testClassDescriptor));
-  //  }
-  //
-  //  private DockerizedTestClassDescriptor getOrCreateClassDescriptor(
-  //      TestDescriptor root, Class<?> classCandidate) {
-  //    var testClassDescriptor =
-  //        root.findByUniqueId(
-  //                DockerizedTestClassDescriptor.getTestClassDescriptorUniqueId(root,
-  // classCandidate))
-  //            .orElse(null);
-  //
-  //    if (testClassDescriptor == null) {
-  //      testClassDescriptor = new DockerizedTestClassDescriptor(classCandidate, root);
-  //      root.addChild(testClassDescriptor);
-  //    }
-  //
-  //    return (DockerizedTestClassDescriptor) testClassDescriptor;
-  //  }
 }

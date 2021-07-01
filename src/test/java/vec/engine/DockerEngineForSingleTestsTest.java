@@ -28,9 +28,7 @@ public class DockerEngineForSingleTestsTest {
         event(test("simple_Aborted"), started()),
         event(
             test("simple_Aborted"),
-            abortedWithReason(
-                instanceOf(RuntimeException.class),
-                message("Some tests aborted. See container logs"))),
+            abortedWithReason(message("Some tests aborted. Check container logs"))),
         event(test("simple_Successful"), started()),
         event(test("simple_Successful"), finishedSuccessfully()),
         event(test("simple_Failed"), started()),
@@ -38,9 +36,9 @@ public class DockerEngineForSingleTestsTest {
             test("simple_Failed"),
             finishedWithFailure(
                 instanceOf(RuntimeException.class),
-                message("Some tests failed. See container logs"))),
-        event(container(AnnotatedSingleTests.class), finishedWithFailure()),
-        event(engine(), finishedWithFailure()));
+                message("Some tests failed. Check container logs"))),
+        event(container(AnnotatedSingleTests.class), finishedSuccessfully()),
+        event(engine(), finishedSuccessfully()));
   }
 
   @Test
@@ -51,9 +49,7 @@ public class DockerEngineForSingleTestsTest {
         event(test("simple_Aborted"), started()),
         event(
             test("simple_Aborted"),
-            abortedWithReason(
-                instanceOf(RuntimeException.class),
-                message("Some tests aborted. See container logs"))),
+            abortedWithReason(message("Some tests aborted. Check container logs"))),
         event(test("simple_Successful"), started()),
         event(test("simple_Successful"), finishedSuccessfully()),
         event(test("simple_Failed"), started()),
@@ -61,7 +57,7 @@ public class DockerEngineForSingleTestsTest {
             test("simple_Failed"),
             finishedWithFailure(
                 instanceOf(RuntimeException.class),
-                message("Some tests failed. See container logs"))));
+                message("Some tests failed. Check container logs"))));
   }
 
   @Test
@@ -74,14 +70,12 @@ public class DockerEngineForSingleTestsTest {
         event(test("simple_Failed"), started()),
         event(
             test("simple_Aborted"),
-            abortedWithReason(
-                instanceOf(RuntimeException.class),
-                message("Some tests aborted. See container logs"))),
+            abortedWithReason(message("Some tests aborted. Check container logs"))),
         event(test("simple_Successful"), finishedSuccessfully()),
         event(
             test("simple_Failed"),
             finishedWithFailure(
                 instanceOf(RuntimeException.class),
-                message("Some tests failed. See container logs"))));
+                message("Some tests failed. Check container logs"))));
   }
 }

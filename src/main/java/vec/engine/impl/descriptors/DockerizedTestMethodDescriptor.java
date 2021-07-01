@@ -1,4 +1,4 @@
-package vec.engine.impl;
+package vec.engine.impl.descriptors;
 
 import java.lang.reflect.Method;
 import org.junit.platform.commons.support.AnnotationSupport;
@@ -7,9 +7,12 @@ import org.junit.platform.engine.TestDescriptor;
 import org.junit.platform.engine.UniqueId;
 import org.junit.platform.engine.support.descriptor.AbstractTestDescriptor;
 import org.junit.platform.engine.support.descriptor.MethodSource;
+import org.junit.platform.engine.support.hierarchical.Node;
 import vec.engine.annotations.Dockerized;
+import vec.engine.impl.DockerEngineExecutionContext;
 
-public class DockerizedTestMethodDescriptor extends AbstractTestDescriptor {
+public class DockerizedTestMethodDescriptor extends AbstractTestDescriptor
+    implements Node<DockerEngineExecutionContext> {
   private final Method testMethod;
   private final Class<?> testClass;
 
@@ -55,5 +58,15 @@ public class DockerizedTestMethodDescriptor extends AbstractTestDescriptor {
   @Override
   public Type getType() {
     return Type.TEST;
+  }
+
+  @Override
+  public DockerEngineExecutionContext execute(
+      DockerEngineExecutionContext context, DynamicTestExecutor dynamicTestExecutor) {
+    String methodFullyQualifiedName =
+        ReflectionUtils.getFullyQualifiedMethodName(getTestClass(), getTestMethod());
+    context.runTest(context.getContainerIds()[0], methodFullyQualifiedName);
+
+    return context;
   }
 }

@@ -26,7 +26,7 @@ public class DockerEngineForClassTest {
   public void annotatedClass_testStatisticsForContainers() {
     executionResults
         .containerEvents()
-        .assertStatistics(stats -> stats.started(2).succeeded(0).failed(2));
+        .assertStatistics(stats -> stats.started(2).succeeded(2).failed(0));
   }
 
   @Test
@@ -42,7 +42,7 @@ public class DockerEngineForClassTest {
                 test("simple_Failed"),
                 finishedWithFailure(
                     instanceOf(RuntimeException.class),
-                    message("Some tests failed. See container logs"))))
+                    message("Some tests failed. Check container logs"))))
         .doNotHave(event(test("simple_Undiscovered"), started()));
   }
 }

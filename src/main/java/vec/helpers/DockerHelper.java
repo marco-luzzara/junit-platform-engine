@@ -37,6 +37,7 @@ public class DockerHelper {
     final String projectDir = System.getProperty("user.dir");
     final String srcDir = projectDir + "/src";
     final String buildGradlePath = projectDir + "/build.gradle";
+    // cannot share gradle cached dependencies because they are locked by the gradle host
     //    final String homeDir = System.getenv("HOME");
     //    final String gradleModulesDir = homeDir + "/.gradle/caches";
 
