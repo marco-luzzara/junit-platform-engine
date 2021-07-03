@@ -33,7 +33,7 @@ public class DockerHelper {
    */
   // docker run --rm -it -d -v "$(pwd)/src:/prj/src" -v "$(pwd)/build.gradle:/prj/build.gradle"
   //    --name junit-cl junit-console-launcher
-  public String startTestingContainer() {
+  public String startTestingContainer(String image, String containerName) {
     final String projectDir = System.getProperty("user.dir");
     final String srcDir = projectDir + "/src";
     final String buildGradlePath = projectDir + "/build.gradle";
@@ -43,7 +43,7 @@ public class DockerHelper {
 
     var containerId =
         client
-            .createContainerCmd("junit-console-launcher")
+            .createContainerCmd(image)
             .withTty(true)
             .withHostConfig(
                 new HostConfig()
@@ -52,7 +52,7 @@ public class DockerHelper {
                         new Bind(srcDir, new Volume("/prj/src")),
                         new Bind(buildGradlePath, new Volume("/prj/build.gradle"))))
             // new Bind(gradleModulesDir, new Volume("/home/gradle/.gradle/caches"))))
-            .withName("junit-cl")
+            .withName(containerName)
             .exec()
             .getId();
 

@@ -3,7 +3,9 @@ package vec.engine.impl;
 import org.junit.platform.commons.util.ReflectionUtils;
 import org.junit.platform.engine.*;
 import org.junit.platform.engine.discovery.ClassSelector;
-import org.junit.platform.engine.support.descriptor.EngineDescriptor;
+import vec.engine.impl.descriptors.DockerEngineDescriptor;
+import vec.engine.impl.descriptors.DockerizedTestClassDescriptor;
+import vec.engine.impl.descriptors.DockerizedTestMethodDescriptor;
 
 public class DockerEngine implements TestEngine {
   private static final String ENGINE_ID = "docker-engine";
@@ -15,7 +17,7 @@ public class DockerEngine implements TestEngine {
 
   @Override
   public TestDescriptor discover(EngineDiscoveryRequest discoveryRequest, UniqueId uniqueId) {
-    TestDescriptor engineDescriptor = new EngineDescriptor(uniqueId, "Docker Engine");
+    DockerEngineDescriptor engineDescriptor = new DockerEngineDescriptor(uniqueId);
 
     discoveryRequest
         .getSelectorsByType(ClassSelector.class)

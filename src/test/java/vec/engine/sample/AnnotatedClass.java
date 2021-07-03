@@ -7,7 +7,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import vec.engine.annotations.Dockerized;
 
-@Dockerized
+@Dockerized(containerName = "junit-cl", image = "junit-console-launcher")
 public class AnnotatedClass {
   @Test
   public void simple_Successful() {}

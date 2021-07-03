@@ -27,7 +27,7 @@ public class EmployeeTest {
         () -> assertThat(empl).hasFullname("emp1"), () -> assertThat(empl).hasWorkingHours(0));
   }
 
-  @Dockerized
+  @Dockerized(containerName = "junit-cl", image = "junit-console-launcher")
   @Test
   public void workFor_nHours_addNToWorkingHours() {
     var empl = new Employee("emp1");

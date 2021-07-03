@@ -8,7 +8,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import vec.engine.annotations.Dockerized;
 
-@Dockerized
+@Dockerized(containerName = "junit-cl1", image = "junit-console-launcher")
 public class EmployeeOnDockerTest {
   @Test
   public void computeSalary_workedForNHours_salaryIsNTimes10() {
