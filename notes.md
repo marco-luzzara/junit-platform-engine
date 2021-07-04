@@ -163,7 +163,9 @@ There are 2 approaches:
 - implementing the `TestEngine` interface
 - extending the `HierarchicalTestEngine` class, made available by the jupiter engine
 
-In both the cases the discovery phase result must be a `TestDescriptor`, which is usually an instance of an `EngineDescriptor`. A `TestDescriptor` could be of type `TEST`, `CONTAINER` or `CONTAINER_AND_TEST`, which indicates a container that could potentially become a test. Basically the root descriptor (i.e. `EngineDescriptor`) is the root node of a tree where every child represents a container or a test. 
+In both the cases the discovery phase result must be a `TestDescriptor`, which is usually an instance of an `EngineDescriptor`. A `TestDescriptor` could be of type `TEST`, `CONTAINER` or `CONTAINER_AND_TEST`, which indicates a container that could potentially become a test. Basically the root descriptor (i.e. `EngineDescriptor`) is the root node of a tree where every child represents a container or a test. The tree's leaves are descriptor of type `TEST`, similar to this:
+
+![Test engine discovery](./test-engine-discovery.png)
 
 The execution phase is just about visiting the entire tree, run tests and get results using the execution listeners. The main difference between the 2 approaches is that in the second one the `execute` method simply does not exist, but every descriptor implements the `Node` interface and you have to indicate for each of them how to behave when some methods are called. The execution order of methods defined in the `Node` interface can be established by looking at the implementation of [`NodeTestTask.execute`](https://github.com/junit-team/junit5/blob/main/junit-platform-engine/src/main/java/org/junit/platform/engine/support/hierarchical/NodeTestTask.java#L87). In order to store data needed throughout the whole phase, an `EngineExecutionContext` is passed to every method.
 
