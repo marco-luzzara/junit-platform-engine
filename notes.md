@@ -8,7 +8,7 @@ When JUnit 4 was released in 2006, it provided a simple and monolithic architect
 
 To face these issues, JUnit 5 framework is distributed with several modules, as in the following image:
 
-<img src="./junit5-architecture.png" alt="JUnit 5 Architecture" width="600"/>
+<img src="./junit5-architecture-simplified.png" alt="JUnit 5 Architecture" width="600"/>
 
 The new modular approach allows the separation of different concerns:
 
@@ -18,7 +18,7 @@ The new modular approach allows the separation of different concerns:
 
 The following is a sequence diagram describing the discovery and execution of tests with the new architecture. Obviously, it is very simplified, e.g. listeners are left out, and may change in future versions:
 
-<img src="./junit-platform.png" alt="JUnit 5 Architecture" width="800"/>
+<img src="./junit-platform-sequence.png" alt="JUnit 5 Architecture" width="800"/>
 
 ---
 
@@ -116,7 +116,7 @@ To aggregate execution results you can use built-in Listeners, like [`SummaryGen
 ---
 
 ## When do I need a custom [`TestEngine`](https://junit.org/junit5/docs/current/api/org.junit.platform.engine/org/junit/platform/engine/TestEngine.html)?
-Most of the times having tests in the form of Java methods is enough, and this is already covered by `JUnit Vintage` and `JUnit Jupiter` test engines. However, you might need to run tests written in a DSL, like in the case of Cucumber with Gherkin syntax, or just discover tests that are auto-generated or downloaded at runtime. 
+Most of the times having tests in the form of Java methods is enough, and this is already covered by `JUnit Vintage` and `JUnit Jupiter` test engines. However, you might need to run tests written in a DSL, like in the case of Cucumber with Gherkin syntax, or just discover tests that are auto-generated or downloaded at runtime. `DynamicTest`s cover only the cases where the *executable code* is available at compile-time.
 In special cases JUnit extensions are not suitable and powerful enough to contain your testing logic, as in the case of `jqwik`, which has a pretty complex test engine.
 
 In general, the `TestEngine` facilitates discovery and execution of tests for a particular programming model. We already saw two concrete implementations:
@@ -154,6 +154,18 @@ test {
     }
 }
 ```
+
+---
+
+## How to create a `TestEngine`?
+There are 2 approaches:
+
+- implementing the `TestEngine` interface
+- extending the `HierarchicalTestEngine` class, made available by the jupiter engine
+
+In both the cases the discovery phase result must be a `TestDescriptor`, which is usually an instance of an `EngineDescriptor`. A `TestDescriptor` could be of type `TEST`, `CONTAINER` or `CONTAINER_AND_TEST`, which indicates a container that could potentially become a test. Basically the root descriptor (i.e. `EngineDescriptor`) is the root node of a tree where every child represents a container or a test. 
+
+The execution phase is just about visiting the entire tree, run tests and get results using the execution listeners. The main difference between the 2 approaches is that in the second one the `execute` method simply does not exist, but every descriptor implements the `Node` interface and you have to indicate for each of them how to behave when some methods are called. The execution order of methods defined in the `Node` interface can be established by looking at the implementation of [`NodeTestTask.execute`](https://github.com/junit-team/junit5/blob/main/junit-platform-engine/src/main/java/org/junit/platform/engine/support/hierarchical/NodeTestTask.java#L87). In order to store data needed throughout the whole phase, an `EngineExecutionContext` is passed to every method.
 
 ---
 
@@ -201,7 +213,7 @@ If you are writing a `TestEngine` and your build tool is Gradle, there are some 
 This is clearly problematic in the case of `Cucumber` because tests are in `.feature` files, that are not recognized as Java class files, of course. There are two workarounds for this:
 
 - forcing the creation of a dummy class with the `@Cucumber` annotation in the package containing the `.feature` files. In this case the `cucumber-engine` retrieves the package name from the found class and search for all `.feature` files in that package.
-- Using the `JUnit Platform Console Launcher`, which is a standalone application for launching the JUnit platform from the console and fully supports the test discovery options. It can be run as a `Gradle` task as well:
+- Using the `JUnit Platform Console Launcher`, which is a standalone application for launching the JUnit platform from the console and fully supports the test discovery options. Instead of specifying selectors manually, you can use the `--scan-classpath` option that scans all directories in the classpath. It can be run as a `Gradle` task as well:
 ```
     tasks {
 
@@ -287,11 +299,12 @@ Filters are very useful in order to run only those tests we are temporarily inte
 They both extend the `Filter` interface, but the post-discovery filters must never modify the `TestDescriptor` passed as argument. Only post-discovery filter can be registered for the `DefaultLauncher`, the suggested way is to leverage the `ServiceLoader` already seen for the test engines. In this case, the file to create is `/META-INF/services/org.junit.platform.launcher.PostDiscoveryFilter`.
 
 ### Listeners
-As per the documentation it is possible to register 3 types of listener (but there are probably more) and you can add each of them with the `ServiceLoader` mechanism or with manual registration, if allowed by the `Launcher` implementation:
+As per the documentation it is possible to register 3 types of listener (but there are [many more](https://github.com/junit-team/junit5/tree/main/junit-platform-launcher/src/main/java/org/junit/platform/launcher/listeners)) and you can add each of them with the `ServiceLoader` mechanism or with manual registration, if allowed by the `Launcher` implementation:
 
 - [`LauncherSessionListener`](https://junit.org/junit5/docs/snapshot/api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherSessionListener.html): it is notified when a `LauncherSession` is opened, that is before test discovery and execution, and when it is closed.
 - [`LauncherDiscoveryListener`](https://junit.org/junit5/docs/snapshot/api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherDiscoveryListener.html): it is specific for the discovery phase only. It is notified at the start and at the end of the discovery phase of each test engine, when the root-level discovery begins and when it is complete.
 - [`TestExecutionListener`](https://junit.org/junit5/docs/current/api/org.junit.platform.launcher/org/junit/platform/launcher/TestExecutionListener.html): it is called during the `TestPlan`'s execution, in fact every method of this listener receives a `TestIdentifier` as its argument. It lets you customize the start/end/skip event of every test (and container) and the registration of dynamic ones.
+- [`EngineExecutionListener`](https://junit.org/junit5/docs/5.5.2/api/org/junit/platform/engine/EngineExecutionListener.html): Listener to be notified of test execution events by a certain test engine (not available with `ServiceLoader`).
 
 To configure listeners registered using the `ServiceLoader` you have 3 options, described [here](https://junit.org/junit5/docs/snapshot/user-guide/index.html#running-tests-config-params).
 
@@ -311,15 +324,3 @@ Simple test engine to execute `main` as test method (`Mainrunner`): [https://git
 Third party test engines: [https://github.com/junit-team/junit5/wiki/Third-party-Extensions#junit-platform-test-engines](https://github.com/junit-team/junit5/wiki/Third-party-Extensions#junit-platform-test-engines)
 
 Demo on creating a TestEngine: [Presentation](https://vimeo.com/236707523) and [Github repo](https://github.com/jlink/jax2017)
-
-
-
-
-
-
-
-
-
-
-
-
