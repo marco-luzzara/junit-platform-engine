@@ -22,7 +22,6 @@ public class DockerEngineExecutionContext implements EngineExecutionContext {
    */
   public String[] prepareDockerContainers() {
     var containerId = dockerHelper.startTestingContainer();
-    dockerHelper.buildTestClasses(containerId);
     containerIds.add(containerId);
 
     return new String[] {containerId};
