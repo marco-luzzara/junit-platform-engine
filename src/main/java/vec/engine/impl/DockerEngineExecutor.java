@@ -21,7 +21,6 @@ public class DockerEngineExecutor {
     Map<String, String> containerNameIdMap =
         startAllContainers(dockerHelper, rootDescriptor.getAllContainerInfo());
     try {
-      startBuildInAllContainers(dockerHelper, containerNameIdMap);
       listener.executionStarted(rootDescriptor);
 
       for (var clsDesc : rootDescriptor.getChildren()) {
@@ -91,20 +90,6 @@ public class DockerEngineExecutor {
     }
 
     return containerNameIdMap;
-  }
-
-  /**
-   * run "gradle testClasses" in all started containers
-   *
-   * @param dockerHelper
-   * @param containerNameIdMap
-   * @return
-   */
-  private void startBuildInAllContainers(
-      DockerHelper dockerHelper, Map<String, String> containerNameIdMap) {
-    for (var containerId : containerNameIdMap.values()) {
-      dockerHelper.buildTestClasses(containerId);
-    }
   }
 
   /**

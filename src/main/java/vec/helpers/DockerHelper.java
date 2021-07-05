@@ -26,20 +26,21 @@ public class DockerHelper {
   }
 
   /**
-   * start the testing container with 2 bind mounts: the src folder and the build.gradle file. the
+   * start the testing container with 3 bind mounts:
+   * - build/libs folder where the fat jar is created
+   * - build/classes/java containing all the .class files
+   * - build/resources/main for the test engine registration
    * container name is junit-cl
    *
    * @return the id of the started container
    */
-  // docker run --rm -it -d -v "$(pwd)/src:/prj/src" -v "$(pwd)/build.gradle:/prj/build.gradle"
-  //    --name junit-cl junit-console-launcher
+//  docker run --rm -it -v "$(pwd)/build/libs:/prj/build/libs" \
+//          -v "$(pwd)/build/classes/java:/prj/build/classes/java" \
+//          -v "$(pwd)/build/resources:/prj/build/resources" \
+//          --name {containerName} {image}
   public String startTestingContainer(String image, String containerName) {
     final String projectDir = System.getProperty("user.dir");
-    final String srcDir = projectDir + "/src";
-    final String buildGradlePath = projectDir + "/build.gradle";
-    // cannot share gradle cached dependencies because they are locked by the gradle host
-    //    final String homeDir = System.getenv("HOME");
-    //    final String gradleModulesDir = homeDir + "/.gradle/caches";
+    final String buildDir = projectDir + "/build";
 
     var containerId =
         client
@@ -49,9 +50,9 @@ public class DockerHelper {
                 new HostConfig()
                     .withAutoRemove(true)
                     .withBinds(
-                        new Bind(srcDir, new Volume("/prj/src")),
-                        new Bind(buildGradlePath, new Volume("/prj/build.gradle"))))
-            // new Bind(gradleModulesDir, new Volume("/home/gradle/.gradle/caches"))))
+                            new Bind(buildDir + "/classes/java", new Volume("/prj/build/classes/java")),
+                            new Bind(buildDir + "/resources", new Volume("/prj/build/resources")),
+                            new Bind(buildDir + "/libs", new Volume("/prj/build/libs"))))
             .withName(containerName)
             .exec()
             .getId();
@@ -72,58 +73,27 @@ public class DockerHelper {
   }
 
   /**
-   * Inside the container with id containerId, only the gradle daemon has been started. this method
-   * execute a `gradle build` to compile the source code.
-   *
-   * @param containerId
-   */
-  // docker exec junit-cl gradle build
-  public void buildTestClasses(final String containerId) {
-    try {
-      var execId =
-          client
-              .execCreateCmd(containerId)
-              .withAttachStdout(true)
-              .withAttachStderr(true)
-              .withCmd("gradle", "testClasses")
-              .exec()
-              .getId();
-
-      var execStartCallback = new ExecStartResultCallback();
-      client.execStartCmd(execId).exec(execStartCallback).awaitCompletion();
-
-      System.out.println(execStartCallback.getExecOutput());
-    } catch (InterruptedException exc) {
-      throw new RuntimeException(exc);
-    }
-  }
-
-  /**
    * calls the junit console launcher inside the container and returns the summary of the execution.
-   * the only selector given is the methodFullyQualifiedName passed in input. The classpath is
-   * computed by gradle, by making it print with `printCLassPath` task.
+   * the only selector given is the methodFullyQualifiedName passed in input. The classpath includes
+   * the classes, resources and the fat jar created with the shadow plugin
    *
    * @param containerId
    * @param methodFullyQualifiedName
-   * @return
+   * @return the output of the executed command
    */
-  // docker exec junit-cl bash -c 'java -jar /junit-console-launcher.jar -cp $(gradle -q
-  // printClassPath) \
+  // docker exec junit-cl java -jar /junit-console-launcher.jar -cp build/classes/java/test:build/classes/java/main:build/resources/main:build/libs/junit-custom-engine-1.0-SNAPSHOT-tests.jar \
   //    -E="docker-engine" --details=summary --disable-banner \
-  //    -m "vec.myproject.EmployeeOnDockerTest#computeSalary_workedForNHours_salaryIsNTimes10"'
+  //    -m "vec.myproject.EmployeeOnDockerTest#computeSalary_workedForNHours_salaryIsNTimes10"
   public String runTestInsideDockerContainer(String containerId, String methodFullyQualifiedName) {
     try {
-      var junitConsoleLauncherCommand =
-          String.format(
-              "java -jar /junit-console-launcher.jar -cp $(gradle -q printClassPath) -E=\"docker-engine\" --details=summary --disable-banner -m \"%s\"",
-              methodFullyQualifiedName);
-
       var execId =
           client
               .execCreateCmd(containerId)
               .withAttachStdout(true)
               .withAttachStderr(true)
-              .withCmd("bash", "-c", junitConsoleLauncherCommand)
+              .withCmd("java", "-jar", "/junit-console-launcher.jar", "-cp",
+                      "build/classes/java/test:build/classes/java/main:build/resources/main:build/libs/junit-custom-engine-1.0-SNAPSHOT-tests.jar",
+                      "-E=\"docker-engine\"", "--details=summary", "--disable-banner", "-m", methodFullyQualifiedName)
               .exec()
               .getId();
 
