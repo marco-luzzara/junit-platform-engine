@@ -1,4 +1,4 @@
-FROM gradle:6.8.3-jdk15
+FROM openjdk:15.0.2
 
 ENV DOCKER_ONLY=true
 
@@ -9,4 +9,4 @@ RUN mkdir /prj && chown 1000 /prj
 USER 1000
 WORKDIR /prj
 
-ENTRYPOINT gradle --daemon && bash
+ENTRYPOINT bash
