@@ -26,18 +26,16 @@ public class DockerHelper {
   }
 
   /**
-   * start the testing container with 3 bind mounts:
-   * - build/libs folder where the fat jar is created
-   * - build/classes/java containing all the .class files
-   * - build/resources/main for the test engine registration
-   * container name is junit-cl
+   * start the testing container with 3 bind mounts: - build/libs folder where the fat jar is
+   * created - build/classes/java containing all the .class files - build/resources/main for the
+   * test engine registration container name is junit-cl
    *
    * @return the id of the started container
    */
-//  docker run --rm -it -v "$(pwd)/build/libs:/prj/build/libs" \
-//          -v "$(pwd)/build/classes/java:/prj/build/classes/java" \
-//          -v "$(pwd)/build/resources:/prj/build/resources" \
-//          --name {containerName} {image}
+  //  docker run --rm -it -v "$(pwd)/build/libs:/prj/build/libs" \
+  //          -v "$(pwd)/build/classes/java:/prj/build/classes/java" \
+  //          -v "$(pwd)/build/resources:/prj/build/resources" \
+  //          --name {containerName} {image}
   public String startTestingContainer(String image, String containerName) {
     final String projectDir = System.getProperty("user.dir");
     final String buildDir = projectDir + "/build";
@@ -50,9 +48,9 @@ public class DockerHelper {
                 new HostConfig()
                     .withAutoRemove(true)
                     .withBinds(
-                            new Bind(buildDir + "/classes/java", new Volume("/prj/build/classes/java")),
-                            new Bind(buildDir + "/resources", new Volume("/prj/build/resources")),
-                            new Bind(buildDir + "/libs", new Volume("/prj/build/libs"))))
+                        new Bind(buildDir + "/classes/java", new Volume("/prj/build/classes/java")),
+                        new Bind(buildDir + "/resources", new Volume("/prj/build/resources")),
+                        new Bind(buildDir + "/libs", new Volume("/prj/build/libs"))))
             .withName(containerName)
             .exec()
             .getId();
@@ -81,7 +79,8 @@ public class DockerHelper {
    * @param methodFullyQualifiedName
    * @return the output of the executed command
    */
-  // docker exec junit-cl java -jar /junit-console-launcher.jar -cp build/classes/java/test:build/classes/java/main:build/resources/main:build/libs/junit-custom-engine-1.0-SNAPSHOT-tests.jar \
+  // docker exec junit-cl java -jar /junit-console-launcher.jar -cp
+  // build/classes/java/test:build/classes/java/main:build/resources/main:build/libs/junit-custom-engine-1.0-SNAPSHOT-tests.jar \
   //    -E="docker-engine" --details=summary --disable-banner \
   //    -m "vec.myproject.EmployeeOnDockerTest#computeSalary_workedForNHours_salaryIsNTimes10"
   public String runTestInsideDockerContainer(String containerId, String methodFullyQualifiedName) {
@@ -91,9 +90,17 @@ public class DockerHelper {
               .execCreateCmd(containerId)
               .withAttachStdout(true)
               .withAttachStderr(true)
-              .withCmd("java", "-jar", "/junit-console-launcher.jar", "-cp",
-                      "build/classes/java/test:build/classes/java/main:build/resources/main:build/libs/junit-custom-engine-1.0-SNAPSHOT-tests.jar",
-                      "-E=\"docker-engine\"", "--details=summary", "--disable-banner", "-m", methodFullyQualifiedName)
+              .withCmd(
+                  "java",
+                  "-jar",
+                  "/junit-console-launcher.jar",
+                  "-cp",
+                  "build/classes/java/test:build/classes/java/main:build/resources/main:build/libs/junit-custom-engine-1.0-SNAPSHOT-tests.jar",
+                  "-E=\"docker-engine\"",
+                  "--details=summary",
+                  "--disable-banner",
+                  "-m",
+                  methodFullyQualifiedName)
               .exec()
               .getId();
 
