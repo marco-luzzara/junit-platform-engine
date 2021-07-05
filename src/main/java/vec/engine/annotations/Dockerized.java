@@ -9,4 +9,18 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @EnabledIfEnvironmentVariable(named = "DOCKER_ONLY", matches = "true")
-public @interface Dockerized {}
+public @interface Dockerized {
+  String image();
+
+  String containerName();
+
+  class ContainerInfo {
+    public final String image;
+    public final String containerName;
+
+    public ContainerInfo(Dockerized dockerizedAnnotation) {
+      this.image = dockerizedAnnotation.image();
+      this.containerName = dockerizedAnnotation.containerName();
+    }
+  }
+}

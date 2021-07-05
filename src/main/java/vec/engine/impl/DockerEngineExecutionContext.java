@@ -1,35 +1,38 @@
 package vec.engine.impl;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import org.junit.platform.commons.util.Preconditions;
 import org.junit.platform.engine.support.hierarchical.EngineExecutionContext;
 import org.opentest4j.TestAbortedException;
 import vec.helpers.DockerHelper;
 
 public class DockerEngineExecutionContext implements EngineExecutionContext {
   private final DockerHelper dockerHelper = new DockerHelper();
-  private final ArrayList<String> containerIds = new ArrayList<>();
+  private Map<String, String> containerNameIdMap = null;
 
-  public String[] getContainerIds() {
-    return containerIds.toArray(String[]::new);
+  public Map<String, String> getContainerNameIdMap() {
+    Preconditions.notNull(containerNameIdMap, "call startDockerContainers before getting the map");
+
+    return new HashMap<>(containerNameIdMap);
   }
 
-  /**
-   * start containers and build test classes to later run enclosed tests.
-   *
-   * @return container ids of started containers
-   */
-  public String[] prepareDockerContainers() {
-    var containerId = dockerHelper.startTestingContainer();
-    containerIds.add(containerId);
-
-    return new String[] {containerId};
+  /** start containers starting from a map (containerName, image) */
+  public void startDockerContainers(Map<String, String> containerInfoMap) {
+    containerNameIdMap = new HashMap<>();
+    for (var containerInfo : containerInfoMap.entrySet()) {
+      var containerId =
+          dockerHelper.startTestingContainer(containerInfo.getValue(), containerInfo.getKey());
+      containerNameIdMap.put(containerInfo.getKey(), containerId);
+    }
   }
 
   /** stop all registered testing containers */
   public void cleanUpDockerContainer() {
-    for (var containerId : containerIds) dockerHelper.stopTestingContainer(containerId);
+    Preconditions.notNull(containerNameIdMap, "call startDockerContainers before getting the map");
+
+    for (var containerId : containerNameIdMap.values()) {
+      dockerHelper.stopTestingContainer(containerId);
+    }
   }
 
   /**

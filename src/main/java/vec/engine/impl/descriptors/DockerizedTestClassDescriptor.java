@@ -1,5 +1,6 @@
 package vec.engine.impl.descriptors;
 
+import java.util.Optional;
 import org.junit.platform.commons.support.AnnotationSupport;
 import org.junit.platform.commons.util.ReflectionUtils;
 import org.junit.platform.engine.TestDescriptor;
@@ -9,9 +10,10 @@ import org.junit.platform.engine.support.descriptor.ClassSource;
 import org.junit.platform.engine.support.hierarchical.Node;
 import vec.engine.annotations.Dockerized;
 import vec.engine.impl.DockerEngineExecutionContext;
+import vec.engine.interfaces.DockerizableDescriptor;
 
 public class DockerizedTestClassDescriptor extends AbstractTestDescriptor
-    implements Node<DockerEngineExecutionContext> {
+    implements Node<DockerEngineExecutionContext>, DockerizableDescriptor {
   private final Class<?> testClass;
 
   public DockerizedTestClassDescriptor(Class<?> testClass, TestDescriptor parent) {
@@ -29,6 +31,14 @@ public class DockerizedTestClassDescriptor extends AbstractTestDescriptor
     return parentDescriptor.getUniqueId().append("class", testClass.getCanonicalName());
   }
 
+  /**
+   * this method could return false even for a DockerizedTestClassDescriptor, which could be created
+   * as a container for DockerizedTestMethodDescriptor. In this case the class is not
+   * actually @Dockerized, but only some methods are.
+   *
+   * @param classCandidate
+   * @return
+   */
   public static boolean isDockerizedTestClass(Class<?> classCandidate) {
     return !ReflectionUtils.isAbstract(classCandidate)
         && ReflectionUtils.isPublic(classCandidate)
@@ -45,5 +55,15 @@ public class DockerizedTestClassDescriptor extends AbstractTestDescriptor
   @Override
   public Type getType() {
     return Type.CONTAINER;
+  }
+
+  @Override
+  public Optional<Dockerized.ContainerInfo> getContainerInfo() {
+    if (!isDockerizedTestClass(this.testClass)) return Optional.empty();
+
+    var dockerizedAnnotation =
+        AnnotationSupport.findAnnotation(this.testClass, Dockerized.class).orElseThrow();
+
+    return Optional.of(new Dockerized.ContainerInfo(dockerizedAnnotation));
   }
 }
