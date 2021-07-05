@@ -24,7 +24,6 @@ public class DockerEngineExecutor {
       startBuildInAllContainers(dockerHelper, containerNameIdMap);
       listener.executionStarted(rootDescriptor);
 
-      var unsuccessfulContainerResults = new ArrayList<TestExecutionResult>();
       for (var clsDesc : rootDescriptor.getChildren()) {
         Preconditions.condition(
             clsDesc instanceof DockerizedTestClassDescriptor,
@@ -40,13 +39,9 @@ public class DockerEngineExecutor {
                 dockerHelper,
                 containerNameIdMap);
         listener.executionFinished(clsDesc, containerExecutionResult);
-        if (containerExecutionResult.getStatus() != TestExecutionResult.Status.SUCCESSFUL)
-          unsuccessfulContainerResults.add(containerExecutionResult);
       }
 
-      var containerExecutionResult =
-          getExecutionResultFromChildrenResults(unsuccessfulContainerResults);
-      listener.executionFinished(rootDescriptor, containerExecutionResult);
+      listener.executionFinished(rootDescriptor, TestExecutionResult.successful());
     } finally {
       stopAllContainers(dockerHelper, containerNameIdMap);
     }
@@ -57,7 +52,6 @@ public class DockerEngineExecutor {
       EngineExecutionListener listener,
       DockerHelper dockerHelper,
       Map<String, String> containerNameIdMap) {
-    var unsuccessfulTestResults = new ArrayList<TestExecutionResult>();
     for (var methodDesc : clsDesc.getChildren()) {
       Preconditions.condition(
           methodDesc instanceof DockerizedTestMethodDescriptor,
@@ -73,13 +67,11 @@ public class DockerEngineExecutor {
           containerNameIdMap.get(
               dockerizedMethodDesc.getContainerInfo().orElseThrow().containerName);
       var testResult = runTest(dockerHelper, containerId, methodFullyQualifiedName);
-      if (testResult.getStatus() != TestExecutionResult.Status.SUCCESSFUL)
-        unsuccessfulTestResults.add(testResult);
 
       listener.executionFinished(methodDesc, testResult);
     }
 
-    return getExecutionResultFromChildrenResults(unsuccessfulTestResults);
+    return TestExecutionResult.successful();
   }
 
   /**
@@ -127,28 +119,6 @@ public class DockerEngineExecutor {
     for (var containerId : containerNameIdMap.values()) {
       dockerHelper.stopTestingContainer(containerId);
     }
-  }
-
-  private TestExecutionResult getExecutionResultFromChildrenResults(
-      List<TestExecutionResult> childrenUnsuccessfulResults) {
-    return childrenUnsuccessfulResults.size() >= 1
-        ? TestExecutionResult.failed(
-            buildAggregatedException(
-                "One or more exceptions have been suppressed",
-                childrenUnsuccessfulResults.stream()
-                    .map(testRes -> testRes.getThrowable().orElseThrow())
-                    .toArray(Throwable[]::new)))
-        : TestExecutionResult.successful();
-  }
-
-  private Throwable buildAggregatedException(String message, Throwable[] throwables) {
-    var outerThrowable = new RuntimeException(message);
-
-    for (var throwable : throwables) {
-      outerThrowable.addSuppressed(throwable);
-    }
-
-    return outerThrowable;
   }
 
   private TestExecutionResult runTest(

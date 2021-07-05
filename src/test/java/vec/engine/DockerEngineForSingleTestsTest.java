@@ -39,8 +39,8 @@ public class DockerEngineForSingleTestsTest {
             finishedWithFailure(
                 instanceOf(RuntimeException.class),
                 message("Some tests failed. See container logs"))),
-        event(container(AnnotatedSingleTests.class), finishedWithFailure()),
-        event(engine(), finishedWithFailure()));
+        event(container(AnnotatedSingleTests.class), finishedSuccessfully()),
+        event(engine(), finishedSuccessfully()));
   }
 
   @Test

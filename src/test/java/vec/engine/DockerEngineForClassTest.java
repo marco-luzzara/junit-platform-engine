@@ -26,7 +26,7 @@ public class DockerEngineForClassTest {
   public void annotatedClass_testStatisticsForContainers() {
     executionResults
         .containerEvents()
-        .assertStatistics(stats -> stats.started(2).succeeded(0).failed(2));
+        .assertStatistics(stats -> stats.started(2).succeeded(2).failed(0));
   }
 
   @Test
