@@ -25,6 +25,16 @@ dependencies {
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
 }
 
+// to run also dockerized tests if you are in the host environment use the following method
+//static def setTestingEnvironment(Test task) {
+//    task.systemProperty 'testingEnvironment', System.getProperty('testingEnvironment') == null ?
+//            'host' :
+//            System.getProperty('testingEnvironment')
+//}
+// and call it with
+//  setTestingEnvironment(this.test)
+// https://stackoverflow.com/questions/21406265/how-to-give-system-property-to-my-test-via-gradle-and-d
+
 test {
     filter {
         includeTestsMatching 'vec.myproject.*'
@@ -71,6 +81,10 @@ task fatJar(type: ShadowJar) {
     archiveClassifier.set("tests")
     from sourceSets.test.output
     configurations = [project.configurations.testImplementation]
+}
+
+tasks.withType(Test).configureEach {
+    dependsOn fatJar
 }
 
 spotless {

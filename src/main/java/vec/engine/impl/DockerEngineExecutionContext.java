@@ -55,6 +55,11 @@ public class DockerEngineExecutionContext implements EngineExecutionContext {
       throw new TestAbortedException("Some tests aborted. Check container logs");
     else if (parser.failedTests > 0)
       throw new RuntimeException("Some tests failed. Check container logs");
+    else if (parser.skippedTests > 0)
+      throw new RuntimeException("Some tests have been skipped. Check container logs");
+    else if (parser.successfulTests == 0)
+      throw new RuntimeException(
+          "No test has been run, a test container probably failed. Check container logs");
   }
 
   private static class ConsoleLauncherResultParser {

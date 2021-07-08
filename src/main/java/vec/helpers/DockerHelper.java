@@ -79,7 +79,8 @@ public class DockerHelper {
    * @param methodFullyQualifiedName
    * @return the output of the executed command
    */
-  // docker exec junit-cl java -jar /junit-console-launcher.jar -cp
+  // docker exec junit-cl docker exec junit-cl java -DtestingEnvironment=docker -jar \
+  // /junit-console-launcher.jar -cp \
   // build/classes/java/test:build/classes/java/main:build/resources/main:build/libs/junit-custom-engine-1.0-SNAPSHOT-tests.jar \
   //    -E="docker-engine" --details=summary --disable-banner \
   //    -m "vec.myproject.EmployeeOnDockerTest#computeSalary_workedForNHours_salaryIsNTimes10"
@@ -92,6 +93,7 @@ public class DockerHelper {
               .withAttachStderr(true)
               .withCmd(
                   "java",
+                  "-DtestingEnvironment=docker",
                   "-jar",
                   "/junit-console-launcher.jar",
                   "-cp",
